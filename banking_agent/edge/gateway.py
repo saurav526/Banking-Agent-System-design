@@ -1,8 +1,42 @@
-"""Edge Layer: WAF . DDoS . Rate Limits . API Gateway  (ASGI middleware).
+"""
+Edge Gateway & Traffic Security Middleware Module
+==================================================
 
-In production this sits in a managed edge (Cloud Armor / AWS WAF + API
-Gateway / Apigee). This in-app version enforces the same controls so the
-system is safe even when run standalone.
+Serves as the perimeter defensive layer and ASGI middleware (built on Starlette)
+for ingress traffic control, DoS mitigation, rate limiting, and web application
+firewall (WAF) rule enforcement.
+
+In production architectures, these capabilities typically run on cloud edges
+(Cloud Armor, AWS WAF, Apigee); this in-app implementation guarantees identical
+zero-trust guardrails when running standalone or in development.
+
+Key Defenses & Responsibilities:
+--------------------------------
+1. Route Whitelisting (API Gateway):
+   - Restricts external reachability strictly to exposed prefixes (`PUBLIC_ROUTES`),
+     returning 404 Not Found for undeclared endpoints.
+
+2. DDoS Load Shedding & Concurrency Limiting:
+   - Uses an asyncio semaphore (`_inflight`) to bound parallel active requests.
+   - Rejects excess traffic with HTTP 503 ("Server busy") and `Retry-After` headers.
+
+3. Volumetric & Token Bucket Rate Limiting:
+   - Keyed per client IP (`ip:<host>`) and per authenticated user (`user:<sub>`).
+   - Extracts unverified JWT subjects via Bearer token inspection specifically for
+     rate-limiting buckets, returning HTTP 429 when depleted.
+
+4. Anti-DoS Payload Constraints:
+   - Rejects oversized requests based on `Content-Length` headers and inspects
+     actual streamed body bytes against `settings.max_body_bytes` (HTTP 413).
+
+5. Web Application Firewall (WAF) Inspection:
+   - Evaluates URL query parameters and request bodies (POST, PUT, PATCH)
+     against threat detection heuristics (`inspect`), halting exploits with HTTP 403.
+
+6. Security Headers & Telemetry:
+   - Injects standard security response headers (HSTS, CSP, X-Frame-Options, etc.).
+   - Appends trace identifiers (`X-Request-ID`) and streams latency/status metrics
+     to `request_stats` and `tracer`.
 """
 from __future__ import annotations
 
