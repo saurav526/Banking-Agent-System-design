@@ -1,4 +1,30 @@
-"""Observability (left box #2): CPU, memory, disk utilisation, etc."""
+"""
+System Telemetry & Performance Metrics Module
+=============================================
+
+Gathers host system resource utilization and tracks operational HTTP traffic
+performance, latency distributions, and defensive edge-blocking statistics.
+
+Key Components & Responsibilities:
+----------------------------------
+1. Request Performance & Error Accounting (`RequestStats`):
+   - Ingress Counters: Aggregates total incoming requests (`total`), server faults
+     (`errors_5xx` for HTTP >= 500), and policy/security rejections (`blocked`
+     for HTTP 401, 403, 413, and 429).
+   - Rolling Latency Tracking: Collects request execution durations (`latencies_ms`),
+     automatically trimming the window to the most recent 1,000 samples once the buffer
+     exceeds 2,000 to prevent unbounded memory growth.
+   - Percentile Calculations: Evaluates p50, p95, and p99 latency percentiles for SLA
+     and responsiveness monitoring.
+
+2. Host & Process Observability (`system_metrics`):
+   - Runtime Tracking: Reports process uptime in seconds and OS process ID (`pid`).
+   - Resource Utilization: Uses `psutil` (when installed) to capture real-time CPU usage,
+     virtual memory percentage, resident set size (`process_rss_mb`), root disk usage
+     percentage, and active thread counts.
+   - Unified Telemetry Payload: Combines host resource metrics with aggregated
+     `RequestStats` to feed health checks and operational dashboards.
+"""
 from __future__ import annotations
 
 import os
