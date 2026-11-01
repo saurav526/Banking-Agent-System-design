@@ -1,3 +1,44 @@
+"""
+End-to-End System Integration Test Suite Module
+===============================================
+
+Comprehensive integration test harness executing end-to-end assertions across
+all architectural tiers of the multi-agent banking system using FastAPI's `TestClient`.
+
+Coverage & Verification Areas:
+------------------------------
+1. Edge Gateway & Ingress Defenses:
+   - Security headers injection (nosniff, request ID tracing).
+   - WAF pattern inspection blocking web exploits (XSS, SQLi, path traversal)
+     and LLM-targeted prompt injections at perimeter (HTTP 403).
+   - Anti-DoS limits enforcing payload body size thresholds (HTTP 413) and
+     unwhitelisted route gateway rejections (HTTP 404).
+   - In-memory token-bucket rate limiter exhaustion and capacity resets.
+
+2. Authentication, Authorization & Isolation:
+   - Mandatory Bearer token validation and credential rejection (HTTP 401).
+   - Tenant session isolation ensuring users cannot query or post to sessions
+     owned by other principals (HTTP 404).
+   - Role-based operational access control restricting system metrics and spend
+     dashboards to the `agent_ops` role (HTTP 403 for standard users).
+
+3. Agentic Routing, PII Protection & HITL Workflows:
+   - Prompt sanitization ensuring sensitive numbers (accounts, PANs) are redacted
+     before reaching LLM prompts and distributed trace events.
+   - DLP response masking verifying account numbers are masked (`XXXX0002`) in output.
+   - Human-in-the-Loop (HITL) confirmation flows: creates pending actions in shared state,
+     awaits user affirmation ("yes"), and executes mutating service updates (`kyc_update`).
+   - Distributed trace endpoint verification validating capture of agent, LLM, tool,
+     and authz lifecycle spans.
+
+4. Model Context Protocol (MCP) HTTP Service Layer:
+   - Shared secret authentication verification over JSON-RPC 2.0 (`x-mcp-secret`).
+   - Tool schema enumeration and account ownership enforcement (`isError` on foreign accounts).
+
+5. Data Protection Vaulting:
+   - Bidirectional PII tokenisation and lossless rehydration round-trip integrity (`PIIVault`).
+"""
+
 import json
 import pytest
 from fastapi.testclient import TestClient
