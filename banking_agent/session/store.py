@@ -1,6 +1,40 @@
-"""Session Store: conversation history + inter-agent shared state (SQLite).
+"""
+Session State & Conversation Persistence Store Module
+======================================================
 
-Swap for Redis/Postgres in production by re-implementing this interface.
+Provides thread-safe persistence for conversational history, active user sessions,
+and inter-agent shared memory using a local SQLite database backing.
+
+Key Components & Schemas:
+-------------------------
+1. Session Management (`sessions`):
+   - `create_session(user_id)`: Generates a unique UUID-based session identifier,
+     records creation timestamps, and links it to an authenticated owner.
+   - `get_owner(session_id)`: Verifies session tenancy and ownership boundaries.
+   - `list_sessions(user_id)`: Retrieves all sessions owned by a user, ordered
+     by recent activity (`updated_at DESC`).
+
+2. Multi-Turn Dialogue History (`messages`):
+   - `append(session_id, role, content, agent)`: Appends inbound/outbound chat turns
+     attributed to specific roles (user, assistant, tool) and domain agents, while
+     touching the parent session's `updated_at` timestamp.
+   - `history(session_id, limit)`: Fetches a bounded window of recent messages
+     (default: 20) reconstructed in chronological order.
+
+3. Inter-Agent Shared Memory (`shared_state`):
+   - `set_state(session_id, key, value, updated_by)`: Inserts or replaces arbitrary
+     JSON-serializable execution context, tagging the mutating agent and timestamp.
+   - `get_state(session_id, key)`: Retrieves either an individual scoped state key
+     or the complete dictionary of shared variables across agents.
+
+Concurrency & Production Architecture:
+--------------------------------------
+- Thread Safety: Employs `threading.Lock` across write transactions and enables
+  `check_same_thread=False` to handle concurrent ASGI requests safely.
+- Extensibility: Serves as a reference interface intended to be swapped for
+  distributed caching and storage backends (e.g., Redis, PostgreSQL) in high-throughput
+  production deployments.
+- Singleton Instance: Exposes `session_store` initialized against `settings.session_db`.
 """
 from __future__ import annotations
 
