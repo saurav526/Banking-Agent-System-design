@@ -1,7 +1,31 @@
-"""OpenAI-compatible provider - used for BOTH:
+"""
+OpenAI-Compatible LLM Provider Module
+=====================================
 
-* Self-hosted LLM  (Ollama / vLLM / TGI / LM Studio expose /v1 chat completions)
-* Third-party LLM  (OpenAI, Azure OpenAI, or any compatible gateway)
+Implements the `LLMProvider` protocol for any backend exposing an OpenAI-style
+`/v1/chat/completions` REST interface. This serves as a unified client for:
+  - Self-hosted runtimes: Ollama, vLLM, Text Generation Inference (TGI), or LM Studio.
+  - Third-party endpoints: OpenAI, Azure OpenAI, or managed API gateways.
+
+Key Components & Capabilities:
+------------------------------
+1. Lazy Client Initialization (`_get`):
+   - Lazily instantiates an `AsyncOpenAI` client using the configured `base_url`,
+     `api_key`, `timeout`, and a single retry attempt (`max_retries=1`).
+   - Reuses the shared client across invocations to optimize connection pooling.
+
+2. Configuration Validation (`configured`):
+   - Verifies that the optional `openai` library dependency is installed.
+   - For `third_party` providers: requires a non-empty `api_key`.
+   - For `self_hosted` providers: requires a defined `base_url`.
+
+3. Chat Completion & Tool Calling (`chat`):
+   - Dispatches asynchronous completion requests with deterministic sampling (`temperature=0`).
+   - Supplies tool/function definitions when provided, enabling `tool_choice="auto"`.
+   - Safely deserializes model-generated tool arguments (`json.loads`) into typed
+     `ToolCall` instances, guarding against malformed JSON output.
+   - Extracts prompt/completion token usage and packages the result into a normalized
+     `LLMResponse`.
 """
 from __future__ import annotations
 
