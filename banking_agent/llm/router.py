@@ -1,13 +1,39 @@
-"""LLM Router: Self-hosted LLM vs Third-party LLM with fallback + cost/trace hooks.
+"""
+LLM Router & Resilience Module
+==============================
 
-Routing policy
---------------
-* Sensitive traffic (contains customer data) -> self-hosted model when
-  ROUTE_SENSITIVE_TO_SELF_HOSTED is on and it is configured.
-* Otherwise -> LLM_DEFAULT_PROVIDER.
-* On error a simple circuit breaker opens for 60s and the next provider in
-  the chain is used; the deterministic mock is the last resort.
-* All prompts are PII-redacted *before* reaching this layer.
+Coordinates multi-tier LLM selection, sensitive-traffic policy routing,
+dynamic circuit breaking, and telemetry instrumentation across model backends.
+
+Key Routing Policies & Architecture:
+------------------------------------
+1. Sensitivity-Based Provider Chaining (`chain`):
+   - Sensitive Traffic: Routes customer-facing, state-affecting, or private banking
+     prompts to the on-premise/self-hosted model when `ROUTE_SENSITIVE_TO_SELF_HOSTED`
+     is active and properly configured.
+   - Default Traffic: Defaults to `LLM_DEFAULT_PROVIDER` (e.g., third-party frontier API).
+   - Mock Fallback: Appends the deterministic `MockProvider` as a terminal zero-cost
+     fallback to guarantee pipeline continuity during outages or testing.
+   - Pre-Condition: Assumes PII redaction and vaulting have been applied prior to ingress.
+
+2. Circuit Breaking & Fault Recovery:
+   - Tracks provider downtime windows via `_open_until`.
+   - On provider exception (timeout, HTTP 5xx, connection failure), trips the circuit
+     breaker for 60 seconds and seamlessly fails over to the next candidate in the chain.
+
+3. Observability & Telemetry Integration:
+   - Records prompt payload summaries and tool schemas via `tracer.event`.
+   - Wraps completion turns in distributed spans (`tracer.span("llm_call")`) capturing
+     token consumption, estimated USD expenses, truncated response content, and tool calls.
+
+4. Governance & Budget Enforcement:
+   - Validates session spending limits via `cost_tracker.check_budget()` before initiating
+     downstream provider invocations.
+   - Computes and records accurate per-turn monetary usage via `cost_tracker.record()`.
+
+5. Operational Health Monitoring:
+   - `status()`: Reports real-time backend readiness, configuration states, models, and
+     circuit breaker flags across all registered providers.
 """
 from __future__ import annotations
 
