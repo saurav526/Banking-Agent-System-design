@@ -1,14 +1,38 @@
-"""Minimal Model Context Protocol (MCP) implementation.
+"""
+Model Context Protocol (MCP) Server & Schema Engine Module
+===========================================================
 
-Implements the MCP JSON-RPC 2.0 methods used by agents:
-``initialize``, ``tools/list`` and ``tools/call`` - served over Streamable
-HTTP (POST /mcp) or invoked in-process. Each server is a separate unit that
-can be deployed independently (see ``python -m banking_agent.mcp.serve``).
+Provides a lightweight, compliant implementation of the Model Context Protocol (MCP)
+JSON-RPC 2.0 interface. It enables downstream banking tools to be exposed as modular
+microservices over Streamable HTTP (POST /mcp) or executed locally via in-process dispatch.
 
-Security: callers must present the shared service secret and the
-authenticated customer context (``X-Customer-Id``) which is injected by the
-platform - never chosen by the LLM - so servers enforce data ownership as
-defence-in-depth.
+Key Protocol Methods & Capabilities:
+------------------------------------
+1. Lifecycle & Tool Negotiation:
+   - `initialize`: Performs handshake, returning protocol version (`2025-06-18`),
+     server identity, and tool capability flags.
+   - `tools/list`: Emits standard tool declarations and schemas, including operational
+     safety annotations (`readOnlyHint`, `destructiveHint`).
+   - `tools/call`: Executes registered tool functions against validated input parameters
+     and customer context.
+
+2. Security & Tenant Boundaries:
+   - Shared Secret Authentication: Validates callers against `settings.mcp_shared_secret`
+     via HTTP header `x-mcp-secret`.
+   - Injected Caller Context: Strictly requires `customer_id` (via `X-Customer-Id` header
+     or internal platform injection) for all tool invocations, preventing the LLM from
+     spoofing user identities.
+
+3. Schema Validation & Argument Coercion (`_validate`):
+   - Validates incoming tool arguments against declared JSON schema rules:
+     * Checks presence of non-empty `required` properties.
+     * Enforces schema boundaries (rejects unexpected arguments).
+     * Enforces strict type casting and verification (`integer`, `string`).
+     * Validates enum restrictions and string length limits (`maxLength`).
+
+4. Network Transport & Exposure (`asgi_app`):
+   - Mounts an ASGI-compatible FastAPI instance providing the standard `/mcp` JSON-RPC
+     transport endpoint and an operational `/health` check route for standalone deployment.
 """
 from __future__ import annotations
 
