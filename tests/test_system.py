@@ -1,8 +1,6 @@
 import json
-
 import pytest
 from fastapi.testclient import TestClient
-
 from banking_agent.edge.rate_limit import TokenBucketLimiter
 from banking_agent.main import app
 from banking_agent.mcp import accounts_server
