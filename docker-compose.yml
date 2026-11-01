@@ -1,0 +1,44 @@
+# Microservice deployment: API + 3 independent MCP servers (+ optional self-hosted LLM)
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    env_file: .env
+    environment:
+      ACCOUNTS_MCP_URL: http://accounts-mcp:8101
+      TRANSACTIONS_MCP_URL: http://transactions-mcp:8102
+      SERVICE_MCP_URL: http://service-mcp:8103
+      SELF_HOSTED_BASE_URL: http://ollama:11434/v1
+      DATA_DIR: /data
+    volumes: [bankdata:/data]
+    depends_on: [accounts-mcp, transactions-mcp, service-mcp]
+
+  accounts-mcp:
+    build: .
+    command: ["python", "-c", "import uvicorn; from banking_agent.mcp.accounts_server import server; uvicorn.run(server.asgi_app(), host='0.0.0.0', port=8101)"]
+    env_file: .env
+    environment: { DATA_DIR: /data }
+    volumes: [bankdata:/data]
+
+  transactions-mcp:
+    build: .
+    command: ["python", "-c", "import uvicorn; from banking_agent.mcp.transactions_server import server; uvicorn.run(server.asgi_app(), host='0.0.0.0', port=8102)"]
+    env_file: .env
+    environment: { DATA_DIR: /data }
+    volumes: [bankdata:/data]
+
+  service-mcp:
+    build: .
+    command: ["python", "-c", "import uvicorn; from banking_agent.mcp.service_server import server; uvicorn.run(server.asgi_app(), host='0.0.0.0', port=8103)"]
+    env_file: .env
+    environment: { DATA_DIR: /data }
+    volumes: [bankdata:/data]
+
+  # Self-hosted LLM (enable with: docker compose --profile llm up)
+  ollama:
+    image: ollama/ollama
+    profiles: ["llm"]
+    ports: ["11434:11434"]
+
+volumes:
+  bankdata:
