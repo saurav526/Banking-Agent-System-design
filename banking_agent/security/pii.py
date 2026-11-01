@@ -1,10 +1,40 @@
-"""PII Redaction.
+"""
+PII Redaction & Reversible Tokenisation Module
+==============================================
 
-Reversible tokenisation: PII in text is replaced by placeholders such as
-<ACCOUNT_1> before it leaves the trust boundary (LLM prompts, logs,
-third-party model). A per-request ``PIIVault`` keeps the mapping so tool
-arguments produced by the LLM can be de-tokenised before hitting the MCP
-servers, and final answers can be restored for the authenticated customer.
+Provides regex-based detection, masking, and bidirectional tokenisation of
+Personally Identifiable Information (PII) before data leaves trust boundaries
+(e.g., passing prompts to LLMs, logging to traces, or calling third-party APIs).
+
+Core Pattern Recognizers (`PII_PATTERNS`):
+------------------------------------------
+Detects sensitive banking and identity tokens using ordered regular expressions:
+  - Electronic Mail (`EMAIL`)
+  - Payment Cards (`CARD`: 13–16 digit credit/debit PANs)
+  - International Bank Account Numbers (`IBAN`)
+  - National Identity Numbers (`AADHAAR`, `PAN`, `SSN`)
+  - Bank Account Numbers (`ACCOUNT`: exactly 12 digits, prioritized before phone numbers)
+  - Telephone Numbers (`PHONE`)
+  - Postal Codes (`POSTCODE_UK`)
+
+Key Components & Vault Mechanics:
+---------------------------------
+1. PIIVault (Bidirectional Token Store):
+   - `tokenise(kind, value)`: Maps raw sensitive strings to synthetic placeholders
+     (e.g., `<ACCOUNT_1>`, `<PAN_1>`) while maintaining forward (`value -> token`)
+     and reverse (`token -> value`) lookup tables.
+   - `redact(text)`: Replaces recognized PII in free-form text with token placeholders,
+     avoiding re-tokenising already masked strings.
+   - `restore(text)`: Rehydrates token placeholders back to original plaintext values
+     using the reverse mapping table.
+   - `redact_obj(obj)` / `restore_obj(obj)`: Recursively traverses nested structures
+     (strings, dictionaries, lists) to apply redaction or rehydration to structured payloads.
+
+2. Static & Logging Utilities:
+   - `contains_pii(text)`: Lightweight boolean check to determine if any sensitive
+     pattern matches the provided text.
+   - `mask_for_logs(text)`: Performs one-way redaction using an ephemeral, discarded
+     vault for sanitizing traces and console outputs without storing reverse maps.
 """
 from __future__ import annotations
 
