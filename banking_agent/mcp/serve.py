@@ -1,10 +1,26 @@
-"""Run each MCP server as its own microservice.
+"""
+MCP Microservices Runner Module
+===============================
 
-    python -m banking_agent.mcp.serve accounts      # :8101
-    python -m banking_agent.mcp.serve transactions  # :8102
-    python -m banking_agent.mcp.serve service       # :8103
+Provides the standalone CLI entry point to run individual Model Context Protocol
+(MCP) domain servers as isolated HTTP microservices via Uvicorn.
 
-Then set ACCOUNTS_MCP_URL=http://localhost:8101 etc. for the main API.
+Service Topology & Default Port Mapping:
+----------------------------------------
+- accounts      -> :8101 (accounts_server.server)
+- transactions  -> :8102 (transactions_server.server)
+- service       -> :8103 (service_server.server)
+
+Execution:
+----------
+Run an individual server directly from the command line:
+    $ python -m banking_agent.mcp.serve accounts      # Port 8101
+    $ python -m banking_agent.mcp.serve transactions  # Port 8102
+    $ python -m banking_agent.mcp.serve service       # Port 8103
+
+When running as standalone services, configure downstream agents or the core API
+using environment variables pointing to their respective URLs (e.g.,
+`ACCOUNTS_MCP_URL=http://localhost:8101`).
 """
 import sys
 
