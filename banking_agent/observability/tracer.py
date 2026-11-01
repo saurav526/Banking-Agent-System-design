@@ -1,8 +1,38 @@
-"""Observability (left box #1): prompts, agent calls, tool calls, etc.
+"""
+Distributed Tracing & Structured Event Logging Module
+=====================================================
 
-Every event is tagged with the current trace/session id (via contextvars),
-kept in an in-memory ring buffer for the dashboard and appended to a JSONL
-file that can be shipped to any log pipeline (ELK, Loki, Datadog ...).
+Provides thread-safe, context-propagated distributed tracing and structured event
+logging across the multi-agent system (prompts, LLM calls, sub-agent handoffs,
+MCP tool executions, security alerts, and system errors).
+
+Key Components & Mechanics:
+---------------------------
+1. Context Propagation (`contextvars`):
+   - Maintains asynchronous, task-local identifiers:
+     * `current_trace_id`: Unique 16-hex identifier per execution flow (`new_trace`).
+     * `current_session_id`: Client session identifier.
+     * `current_user_id`: Authenticated user/principal identifier.
+   - Automatically tags all emitted events and spans without passing explicit IDs
+     through method parameters.
+
+2. In-Memory Ring Buffer & Persistence (`Tracer`):
+   - Fast Ring Buffer: Stores the most recent events (default: 5,000) using a
+     bounded `collections.deque` guarded by `threading.Lock` for UI dashboards
+     and debugging queries (`recent`).
+   - Append-Only JSONL Log: Synchronously streams structured JSON events to disk
+     (`settings.trace_log`) for ingestion by enterprise log aggregators
+     (e.g., Datadog, ELK, Grafana Loki).
+   - Event Counter Registry: Tracks per-category event counts (`counters[kind]`)
+     for operational telemetry.
+
+3. Execution Spans (`span`):
+   - Provides a context manager for tracking operation boundaries, wall-clock
+     duration (`duration_ms` via `time.perf_counter`), execution status (`ok` or `error`),
+     and captured exception representations.
+
+4. Global Singleton:
+   - Exposes a pre-configured `tracer` instance configured with `settings.trace_log`.
 """
 from __future__ import annotations
 
