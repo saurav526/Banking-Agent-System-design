@@ -1,8 +1,54 @@
-"""API layer + app assembly.
+"""
+Application Assembly & REST API Layer Module
+============================================
 
-User Interface (chat) -> Edge Layer -> Authentication -> API -> Coordinator Agent ...
+Serves as the primary entry point and HTTP delivery layer for the multi-agent
+banking platform, assembling edge security, identity verification, session state,
+and coordinator agent dispatch into a unified FastAPI application.
 
-Run:  uvicorn banking_agent.main:app --reload   then open http://localhost:8000
+Architecture & Request Flow:
+----------------------------
+Client (Chat UI / API Consumer)
+  │
+  ▼
+Edge Gateway Middleware (`EdgeMiddleware`)
+  │  [DoS Shedding, Volumetric/Token-Bucket Rate Limiting, WAF Threat Checks]
+  ▼
+Authentication & Identity Provider (`identity_provider`)
+  │  [JWT Bearer Validation, Caller Identity Extraction, Role Enforcement]
+  ▼
+FastAPI API Endpoints & Session Management
+  │  [Input Validation via Pydantic, Session Ownership Isolation]
+  ▼
+Coordinator Agent (`coordinator.handle`)
+  │  [Guardrails, Tokenisation/Vaulting, Intent Decomposition, MCP Tool Execution]
+  ▼
+Downstream MCP Tool Microservices & Core Banking Engine
+
+Exposed Route Groups:
+---------------------
+1. User Interface & Health:
+   - `GET /`: Serves the static web chat UI (`index.html`).
+   - `GET /health`: Returns operational readiness, system version, and LLM backend status.
+
+2. Authentication & Principal Context:
+   - `POST /api/auth/login`: Validates credentials and issues signed JWT bearer tokens.
+   - `GET /api/me`: Returns profile, role memberships, and MFA verification level for the caller.
+
+3. Chat Turns & Session Lifecycle:
+   - `POST /api/sessions`: Initializes a new user session.
+   - `GET /api/sessions`: Lists all sessions owned by the authenticated caller.
+   - `POST /api/chat`: Validates session ownership, creates or resumes sessions, and
+     hands input to `coordinator.handle()`.
+   - `GET /api/sessions/{session_id}/history`: Returns bounded recent dialogue turns.
+   - `GET /api/sessions/{session_id}/state`: Retrieves inter-agent shared memory.
+   - `GET /api/sessions/{session_id}/trace`: Exposes customer-facing agent execution traces.
+
+4. Operations & Observability (`require_ops` Guarded):
+   - `GET /api/admin/metrics`: Aggregates system host usage, event counters, and model health.
+   - `GET /api/admin/traces`: Queries distributed spans and execution telemetry.
+   - `GET /api/admin/costs`: Summarizes real-time LLM token usage and monetary spend.
+   - `POST /api/admin/evals/run`: Triggers the automated multi-agent evaluation benchmark suite.
 """
 from __future__ import annotations
 
