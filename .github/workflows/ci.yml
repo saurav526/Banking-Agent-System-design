@@ -1,0 +1,25 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -r requirements.txt ruff mypy pytest-cov bandit pip-audit
+      - run: ruff check .
+      - run: mypy banking_agent --ignore-missing-imports
+      - run: bandit -r banking_agent -q
+      - run: pip-audit -r requirements.txt
+      - run: python -m pytest -q --cov=banking_agent --cov-fail-under=80
+      - name: Agent evals
+        run: python -m banking_agent.evals
