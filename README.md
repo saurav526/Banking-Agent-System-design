@@ -242,4 +242,8 @@ Issues and PRs are welcome. Before opening a PR, run `python -m pytest -q` and `
 
 ## License
 
-Add a `LICENSE` file (MIT or Apache-2.0 recommended) and state it here.
+License
+
+Released under the MIT License.
+
+This is a demonstration project provided "as is", without warranty. It is not certified for use with real customer or financial data.
