@@ -9,6 +9,8 @@ Flow per user turn
   6. Synthesis (only when >1 agent answered) and PII restoration
   7. Persist conversation + inter-agent shared state in the Session Store
 """
+
+# this module implements the Coordinator agent, which is the first point of contact for a user message. It handles guardrails, PII redaction, and routing to specialist agents (accounts, transactions, service) based on the user's intent. It also manages human-in-the-loop confirmation for state-changing operations and synthesizes responses from multiple agents when needed.
 from __future__ import annotations
 
 import asyncio

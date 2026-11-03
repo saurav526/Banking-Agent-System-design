@@ -1,4 +1,6 @@
 """Domain agent base: an LLM tool-use loop over one MCP server."""
+# this module is the base class for all domain agents, which implement a loop that takes a user task, calls an LLM to generate tool calls, executes those calls against an MCP server, and returns the result to the user. It also handles authorization, PII redaction, and human-in-the-loop confirmation for state-changing operations.
+
 from __future__ import annotations
 
 import copy
