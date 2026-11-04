@@ -89,6 +89,10 @@ def require_ops(p: Principal = Depends(current_principal)) -> Principal:
         raise HTTPException(403, "Ops role required")
     return p
 
+from typing import Annotated
+
+OpsPrincipal = Annotated[Principal, Depends(require_ops)]
+
 
 def _own_session(session_id: str, p: Principal) -> None:
     if session_store.get_owner(session_id) != p.user_id:
