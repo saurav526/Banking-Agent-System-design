@@ -175,9 +175,9 @@ def metrics(_: OpsPrincipal):
 
 @app.get("/api/admin/traces")
 def traces(
+    _: OpsPrincipal,
     limit: int = 200,
     trace_id: str | None = None,
-    _: OpsPrincipal = None
 ):
     return tracer.recent(min(limit, 1000), trace_id=trace_id)
 
@@ -190,5 +190,5 @@ def costs(_: OpsPrincipal):
 @app.post("/api/admin/evals/run")
 async def run_evals(_: OpsPrincipal):
     from .evals.suite import run_suite
-
     return await run_suite()
+
