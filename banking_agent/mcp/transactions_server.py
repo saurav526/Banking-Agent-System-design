@@ -1,4 +1,32 @@
-"""Transactions MCP Server -> Transaction Details, Statement Request."""
+"""
+Transactions MCP Server Module
+==============================
+
+Exposes an in-process Model Context Protocol (MCP) tool server providing
+transaction history lookups and formal account statement generation over the core
+banking system.
+
+Key Tools & Capabilities:
+-------------------------
+1. Transaction Details (`transaction_details`):
+   - Retrieves chronological recent ledger entries for an account or looks up a
+     specific transaction by its identifier (`transaction_id`).
+   - Automatically clamps result sets between 1 and 20 entries (defaulting to 5).
+   - Validates transaction existence, raising `ToolError` if a targeted record is missing.
+   - Enforces data loss prevention (DLP) by returning masked account numbers (`XXXX1234`)
+     alongside structured transaction fields (timestamp, description, amount, category, balance_after).
+
+2. Statement Request (`statement_request`):
+   - Generates and dispatches formal account statements across specified date ranges
+     (`from_date` to `to_date`).
+   - Validates chronological boundaries, raising `ToolError` if `from_date > to_date`.
+   - Counts matching ledger transactions within the designated window (up to 1,000 records).
+   - Dispatches a mutating asynchronous service request (`STATEMENT`) through `core.create_request`
+     with idempotency guarantees (`idempotency_key`) and configurable delivery channels
+     (`email`, `post`, `download`).
+   - Returns a structured confirmation envelope containing the tracking reference, status,
+     period, delivery mode, and total transaction count.
+"""
 from __future__ import annotations
 
 import json

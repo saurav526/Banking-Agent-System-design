@@ -1,4 +1,34 @@
-# Microservice deployment: API + 3 independent MCP servers (+ optional self-hosted LLM)
+# ==============================================================================
+# Microservices Multi-Container Topology (docker-compose.yml)
+# ==============================================================================
+# Defines the multi-container architecture for orchestrating the multi-agent
+# banking platform, decoupling the client-facing API gateway from domain-specific
+# Model Context Protocol (MCP) microservices and local LLM runtimes.
+#
+# Service Architecture & Network Topology:
+# ----------------------------------------
+# 1. API Gateway (`api`):
+#    - Exposes port 8000:8000 to client consumers and UI sessions.
+#    - Interconnects with independent MCP microservices over internal service DNS:
+#        * Accounts MCP:     http://accounts-mcp:8101
+#        * Transactions MCP: http://transactions-mcp:8102
+#        * Service MCP:      http://service-mcp:8103
+#    - Configured for self-hosted LLM endpoints (http://ollama:11434/v1).
+#    - Persists SQLite databases and audit logs via shared volume `bankdata:/data`.
+#    - Startup dependency ordering guarded by `depends_on`.
+#
+# 2. Domain MCP Microservice Cluster:
+#    - `accounts-mcp`:     Runs accounts ASGI server on internal port 8101.
+#    - `transactions-mcp`: Runs transaction ledger & statements ASGI server on 8102.
+#    - `service-mcp`:      Runs service requests & KYC ASGI server on 8103.
+#    - Each service mounts the shared `bankdata` volume to interface directly
+#      with the Core Banking System of Record (SoR) database.
+#
+# 3. Optional Self-Hosted LLM Runtime (`ollama`):
+#    - Gated behind Docker Compose profile `["llm"]`.
+#    - Run command: `docker compose --profile llm up`
+#    - Exposes local inference server on port 11434:11434.
+# ==============================================================================
 services:
   api:
     build: .

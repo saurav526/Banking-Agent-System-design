@@ -1,16 +1,52 @@
 """Coordinator Agent: guardrails -> authorisation -> routing -> synthesis.
 
-Flow per user turn
-  1. Input guardrails (length, prompt-injection) and budget check
-  2. Resolve pending human-in-the-loop confirmation (yes/no)
-  3. PII redaction (reversible vault seeded with the customer's accounts)
-  4. LLM routing over agent "tools" (multi-intent -> parallel agents)
-  5. Authorisation of each agent hand-off
-  6. Synthesis (only when >1 agent answered) and PII restoration
-  7. Persist conversation + inter-agent shared state in the Session Store
+Coordinator Agent Module
+========================
+
+Serves as the central orchestrator and entry point for processing customer turns
+within the multi-agent banking system. It enforces security boundaries, manages
+human-in-the-loop (HITL) workflows, performs intent-based parallel dispatch, and
+synthesizes unified domain responses while maintaining conversation state.
+
+End-to-End Turn Execution Lifecycle:
+-------------------------------------
+1. Pre-Execution Guardrails & Budget Checks:
+   - Validates user input length to prevent denial-of-service/buffer exploits.
+   - Executes Web Application Firewall (WAF) checks for prompt injection attacks.
+   - Evaluates LLM usage cost/budget thresholds, aborting if limits are exceeded.
+
+2. HITL Confirmation Resolution:
+   - Evaluates whether the user's input answers a pending approval/confirmation state
+     (e.g., regex matching affirmative or negative confirmation for sensitive actions
+     like high-value wire transfers).
+
+3. PII Tokenization & Redaction:
+   - Sanitizes prompt inputs using a reversible `PIIVault` pre-seeded with customer-specific
+     account identifiers, card numbers, and identifiers to prevent sensitive leakages to the LLM.
+
+4. Multi-Intent Routing & Tool Dispatch:
+   - Queries the router LLM to decompose customer queries into structured tool calls
+     (`ROUTE_TOOLS`) mapped to domain-specific sub-agents (Accounts, Transactions, Service).
+   - Fans out requests to downstream agents concurrently via `asyncio`.
+
+5. Authorization Checks:
+   - Validates customer identity and principal permissions via `authoriser` before
+     each downstream agent hand-off is permitted to execute.
+
+6. Response Synthesis & De-anonymization:
+   - Consolidates and reconciles outputs across multiple answering agents into a single,
+     coherent response.
+   - Rehydrates redacted tokens using `PIIVault` to restore actual customer data for final delivery.
+
+7. Session & Context Persistence:
+   - Updates dialogue history, active intents, trace identifiers (`tracer`), and inter-agent
+     shared context within the `SessionStore`.
 """
 
+<<<<<<< HEAD
 # this module implements the Coordinator agent, which is the first point of contact for a user message. It handles guardrails, PII redaction, and routing to specialist agents (accounts, transactions, service) based on the user's intent. It also manages human-in-the-loop confirmation for state-changing operations and synthesizes responses from multiple agents when needed.
+=======
+>>>>>>> 9314e0fb5cd604a696f69eeb63d129952396f5c0
 from __future__ import annotations
 
 import asyncio

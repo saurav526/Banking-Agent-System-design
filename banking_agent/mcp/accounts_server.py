@@ -1,4 +1,29 @@
-"""Accounts MCP Server -> Balance Enquiry."""
+"""
+Accounts MCP Server Module
+==========================
+
+Exposes an in-process Model Context Protocol (MCP) tool server providing
+account listing and balance enquiry services over the core banking engine.
+
+Key Tools & Capabilities:
+-------------------------
+1. Account Resolution (`_resolve_account`):
+   - Validates that the requested customer has active accounts registered.
+   - Enforces data isolation and ownership boundaries, ensuring callers can only
+     query accounts belonging to their authenticated `customer_id`.
+   - Defaults to the customer's primary account when `account_id` is omitted.
+   - Raises `ToolError` on unauthorized access attempts or missing records.
+
+2. Account Discovery (`list_accounts`):
+   - Retrieves all accounts tied to the customer.
+   - Applies data loss prevention (DLP) masking to account numbers (e.g., "XXXX1234")
+     before returning account types, currencies, and account statuses.
+
+3. Balance Enquiry (`balance_enquiry`):
+   - Fetches real-time financial balances for a designated or primary account.
+   - Returns ledger balances, available balances, currency codes, account types,
+     and masked account identifiers.
+"""
 from __future__ import annotations
 
 from .core_banking import core

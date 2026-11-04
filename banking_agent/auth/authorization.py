@@ -1,8 +1,30 @@
-"""Authorisation: policy decision point used by the Coordinator Agent.
+"""
+Authorization Policy Decision Point (PDP) Module
+================================================
 
-Decides whether a principal may (a) use an agent and (b) invoke a tool, and
-enforces data-ownership (a customer can only touch their own accounts) and
-step-up authentication for sensitive, state-changing operations.
+Enforces role-based access control (RBAC), multi-factor authentication (MFA) step-up
+requirements, and resource-level data isolation for the Coordinator Agent.
+
+Key Responsibilities & Enforcement Policies:
+--------------------------------------------
+1. Agent-Level Authorization (`can_use_agent`):
+   - Restricts sub-agent accessibility by principal roles defined in `AGENT_POLICY`.
+   - Distinguishes customer domains (accounts, transactions, service) from operational
+     staff scopes (read-only accounts view).
+
+2. Tool-Level Authorization (`can_call_tool`):
+   - Implements a deny-by-default posture for unregistered tools.
+   - Validates caller role membership against permitted tool invocation roles.
+   - Enforces step-up MFA verification on sensitive, state-altering operations
+     (e.g., change of address, KYC updates).
+
+3. Data Ownership & Tenant Isolation:
+   - Validates that targeted resources (`account_id`) belong exclusively to the
+     authenticated principal's set of owned accounts before permitting tool execution.
+
+4. Auditability & Observability:
+   - Emits structured telemetry traces via `tracer` recording all evaluation
+     events, decisions (allowed/denied), and failure reasons.
 """
 from __future__ import annotations
 

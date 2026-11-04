@@ -1,4 +1,37 @@
-"""Cost Tracker: token usage + spend per model / session / user / agent, with budgets."""
+"""
+Cost Tracking & Budget Governance Module
+========================================
+
+Monitors token consumption, computes real-time LLM spending, and enforces strict
+per-session monetary budget guardrails across models, users, and sub-agents.
+
+Key Components & Responsibilities:
+----------------------------------
+1. Token Estimation (`count_tokens`):
+   - Computes token counts using the `cl100k_base` BPE encoding via `tiktoken`
+     when enabled (`USE_TIKTOKEN=1`).
+   - Falls back gracefully to a standard heuristic (1 token ≈ 4 characters)
+     for offline, uninstalled, or low-overhead environments.
+
+2. Cost Accounting & Attribution (`CostTracker.record`):
+   - Calculates prompt and completion expenses based on configured unit rates per
+     million tokens (`settings.pricing`).
+   - Employs thread-safe locks (`threading.Lock`) to attribute USD expenditures across:
+     * Session (`by_session`) – contextualized via `current_session_id`.
+     * User (`by_user`) – contextualized via `current_user_id`.
+     * Domain Agent (`by_agent`) – segmented by calling agent.
+     * Model (`by_model`) – tracking call counts, token aggregates, and spend.
+
+3. Budget Guardrail Enforcement (`check_budget`):
+   - Compares accumulated session spend against `settings.session_budget_usd`.
+   - Raises `BudgetExceeded` to halt pipeline execution before issuing additional
+     costly LLM invocations.
+
+4. Spend Reporting (`summary`):
+   - Exports high-precision, rounded financial summaries detailing overall and
+     dimension-specific expenditure for downstream telemetry and user auditing.
+"""
+
 from __future__ import annotations
 
 import os
@@ -75,7 +108,7 @@ class CostTracker:
 
     def summary(self) -> dict:
         with self._lock:
-            r = lambda d: {k: round(v, 6) for k, v in d.items()}  # noqa: E731
+            r = lambda d: {k: round(v, 6) for k, v in d.items()}
             return {
                 "total_usd": round(self.total_usd, 6),
                 "by_model": {k: {**v, "usd": round(v["usd"], 6)} for k, v in self.by_model.items()},

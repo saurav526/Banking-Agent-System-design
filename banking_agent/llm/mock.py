@@ -1,8 +1,40 @@
-"""Deterministic offline LLM.
+"""
+Deterministic Offline Mock LLM Provider Module
+===============================================
 
-Speaks the exact same tool-calling protocol as a real model so the whole
-agentic pipeline (routing -> agent -> MCP tool -> answer) runs without any
-API key. It is also handy as a last-resort fallback and for CI evals.
+Implements a rule-based, zero-cost mock LLM conforming to the `LLMProvider`
+protocol. Enables end-to-end execution of the multi-agent pipeline (Coordinator
+routing -> domain agent execution -> MCP tool invocation -> response synthesis)
+without requiring external API keys or network connectivity. Ideal for offline
+development, unit testing, and continuous integration (CI) evaluations.
+
+Key Components & Mechanics:
+---------------------------
+1. Pattern Matching & Intent Recognition (`RULES`):
+   - Maps natural language keywords and regex patterns to Coordinator agent routing
+     functions (`route_to_*`) and specific MCP banking tools (`list_accounts`,
+     `balance_enquiry`, `statement_request`, `kyc_update`, etc.).
+   - Disambiguates overlapping intents with rule prioritization (e.g., favoring
+     `balance_enquiry` over generic `list_accounts`, or `statement_request` over
+     `transaction_details`).
+
+2. Deterministic Tool Call & Argument Extraction (`_args`):
+   - Parses masked and tokenized identifiers directly from prompts (e.g., `<ACCOUNT_1>`,
+     `<PAN_1>`, `<AADHAAR_1>`) or aliases from the system prompt (e.g., "savings").
+   - Resolves context-dependent entity references ("same account", "that account")
+     using dialogue history.
+   - Extracts date ranges (ISO formats, "last month", "last N days") and delivery
+     channels for statements, chequebook leaf counts, and KYC document types.
+
+3. Downstream Tool Result Formatting & Synthesis (`_summarise`, `_format`):
+   - Ingests tool completion outputs (`role: "tool"`) and reconstructs human-readable,
+     domain-appropriate banking messages with currency formatting (`_money`).
+   - Formats account summaries, transaction ledgers, service tracking references,
+     and KYC lifecycle notices, while surfacing execution errors gracefully.
+
+4. Token Accounting Simulation:
+   - Evaluates input and output payload sizes via `count_tokens` to ensure mock turns
+     produce valid cost-tracking telemetry.
 """
 from __future__ import annotations
 
@@ -32,7 +64,7 @@ RULES: dict[str, list[str]] = {
     "kyc_update": [r"\bkyc\b", r"\bpan\b", r"aadhaar", r"passport", r"<PAN_\d+>", r"<AADHAAR_\d+>"],
 }
 
-GREETING = re.compile(r"^\s*(hi|hello|hey|good (morning|afternoon|evening)|namaste)\b", re.I)
+GREETING = re.compile(r"^\s*(hi|hello|hey|good (morning|afternoon|evening)|namaste)\b", re.IGNORECASE)
 
 
 def _last(messages: list[dict], role: str) -> str:
@@ -115,7 +147,7 @@ class MockProvider:
         if tool == "transaction_details":
             if m := re.search(r"\b(?:last|recent|past)\s+(\d{1,2})\b", low):
                 args["limit"] = int(m.group(1))
-            if m := re.search(r"\bTXN\w+", user, re.I):
+            if m := re.search(r"\bTXN\w+", user, re.IGNORECASE):
                 args["transaction_id"] = m.group(0).upper()
         elif tool == "statement_request":
             dates = re.findall(r"\d{4}-\d{2}-\d{2}", user)
@@ -136,7 +168,7 @@ class MockProvider:
         elif tool == "change_of_address":
             args.pop("account_id", None)
             m = re.search(r"(?:address (?:is|to)|moved to|change (?:my )?address to|new address[:\s]+|to)\s+(.+)$",
-                          user, re.I)
+                          user, re.IGNORECASE)
             args["new_address"] = (m.group(1) if m else user).strip().rstrip(".")
         elif tool == "chequebook_request":
             if m := re.search(r"\b(25|50|100)\b", user):

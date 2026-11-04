@@ -1,9 +1,38 @@
-"""Authentication: stand-in for the Bank's identity provider (OIDC-like).
-
-Issues and validates signed JWT access tokens. In production replace
-``login`` with an OIDC redirect to the real IdP and keep ``verify_token``
-validating the IdP's JWKS-signed tokens.
 """
+Identity Provider (IdP) & Authentication Module
+===============================================
+
+Serves as an OIDC-like identity provider stand-in responsible for credential
+verification, cryptographic hashing, and JWT token lifecycle management.
+
+Key Components & Responsibilities:
+----------------------------------
+1. Password Hashing & Secret Verification:
+   - Uses salted PBKDF2-HMAC-SHA256 (`100,000` iterations) to hash credentials.
+   - Leverages `hmac.compare_digest` to prevent timing attacks during credential validation.
+
+2. User Directory & Identity Context:
+   - Maintains an in-memory directory (`_USERS`) linking login handles to core
+     banking customer IDs (`customer_id`), display names, role assignments,
+     and baseline MFA enrollment statuses.
+
+3. Principal Identity Representation:
+   - Defines the `Principal` dataclass capturing caller identity (`user_id`,
+     `customer_id`), role-based authorizations (`roles`), step-up MFA verification
+     assurance level (`mfa`), and unique token trace identifiers (`token_id`).
+
+4. JWT Lifecycle Management:
+   - `login()`: Authenticates user credentials and issues signed HS256 JWT access
+     tokens embedding standard claims (`iss`, `sub`, `aud`, `iat`, `exp`, `jti`)
+     alongside banking claims (`customer_id`, `roles`, `acr`).
+   - `verify_token()`: Decodes and validates JWT claims against configured issuers
+     and audiences, extracting the active caller context.
+
+5. FastAPI Dependency Injection:
+   - `current_principal()`: Extracts and validates the HTTP Bearer token from incoming
+     requests via `HTTPBearer`, injecting the validated `Principal` into endpoint handlers.
+"""
+
 from __future__ import annotations
 
 import hashlib

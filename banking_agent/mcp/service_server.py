@@ -1,4 +1,33 @@
-"""Service MCP Server -> Change of Address, Chequebook Request, KYC Update."""
+"""
+Service MCP Server Module
+==========================
+
+Exposes an in-process Model Context Protocol (MCP) tool server providing
+operational banking services: address modifications, chequebook issuance,
+and KYC verification lifecycle management.
+
+Key Tools & Capabilities:
+-------------------------
+1. Change of Address (`change_of_address`):
+   - Modifies the customer's registered correspondence address in the core system.
+   - Enforces minimum input validation (requires at least 10 non-whitespace characters
+     including street, city, and postcode).
+   - Generates an auditable service request record with idempotency tracking.
+   - Updates the customer record immediately unless flagged as a duplicate submission.
+
+2. Chequebook Issuance (`chequebook_request`):
+   - Orders a new chequebook for a specified account (or resolves to primary).
+   - Enforces allowable leaf counts (strictly 25, 50, or 100 leaves).
+   - Restricts issuance to eligible account categories (`CURRENT`, `SAVINGS`).
+   - Masks the account identifier (`XXXX1234`) and returns estimated delivery timeframes (7 days).
+
+3. KYC Status & Verification (`kyc_status`, `kyc_update`):
+   - `kyc_status`: Inspects the customer's active verification state (`VERIFIED`, `PENDING_RENEWAL`)
+     and last verified timestamp.
+   - `kyc_update`: Validates and submits re-verification identity documents (`PAN`, `AADHAAR`, `PASSPORT`).
+   - Validates document numbers against strict standard regular expression formats (`_DOC_RULES`).
+   - Transitions the customer's KYC lifecycle state to `UNDER_REVIEW` and returns masked document tokens.
+"""
 from __future__ import annotations
 
 import json

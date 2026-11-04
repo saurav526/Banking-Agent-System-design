@@ -1,4 +1,48 @@
-"""Mock core-banking system of record (SQLite) behind the MCP servers."""
+"""
+Core Banking System of Record (SoR) Module
+===========================================
+
+Provides a persistent, thread-safe SQLite-backed mock core-banking engine that
+serves as the single source of truth for accounts, transactions, customer profiles,
+and operational service requests behind downstream MCP servers.
+
+Key Entities & Relational Schema:
+---------------------------------
+1. Customers (`customers`):
+   - Stores KYC verification states (`VERIFIED`, `PENDING_RENEWAL`), customer identity,
+     contact details, and last update timestamps.
+
+2. Accounts (`accounts`):
+   - Manages customer account portfolios, balances, available funds, account categories
+     (`SAVINGS`, `CURRENT`), and operational statuses (`ACTIVE`).
+
+3. Transactions (`transactions`):
+   - Maintains an append-only ledger of historical debit and credit records categorized
+     by merchant/type (shopping, food, utilities, income, transfers) alongside running balances.
+
+4. Service Requests (`service_requests`):
+   - Tracks asynchronous operational tickets (e.g., chequebooks, statement dispatches,
+     KYC reviews) with idempotency guarantees (`idempotency_key UNIQUE`).
+
+Key Operational Capabilities:
+-----------------------------
+- Automatic Initialization & Seeding (`_init`, `_seed`):
+  Initializes tables and seeds deterministic synthetic baseline data (accounts, customers,
+  and chronological transaction streams) upon cold-start if the database is unpopulated.
+
+- Thread-Safe Mutating Operations:
+  Uses an internal `threading.Lock` to serialize state updates:
+    * `create_request()`: Generates unique tracking references (`SR...`) and gracefully
+      handles idempotent resubmissions (`duplicate=True`).
+    * `update_customer()`: Applies dynamic partial profile and KYC updates safely.
+
+- Read Queries & Ledger Filtering:
+  Provides targeted accessors (`accounts_for`, `account`, `customer`, `transactions`)
+  with support for pagination limits, transaction ID lookups, and ISO date-range bounds.
+
+- Global Runtime Instance:
+  Exposes a pre-configured singleton `core` initialized against `settings.core_banking_db`.
+"""
 from __future__ import annotations
 
 import random

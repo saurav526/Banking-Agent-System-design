@@ -1,4 +1,41 @@
-"""Central configuration (env-driven, see .env.example)."""
+"""
+Central Configuration & Runtime Settings Module
+===============================================
+
+Defines environment-driven application configuration and operational parameters
+for the multi-agent banking system, with automatic `.env` loading and dataclass-backed defaults.
+
+Configuration Subsystems:
+-------------------------
+1. Filesystem Paths:
+   - `BASE_DIR` & `DATA_DIR`: Resolves repository root and creates local persistent
+     storage paths for databases and audit traces.
+
+2. Authentication & Identity Provider (IdP):
+   - JWT validation secrets, token issuers, and expiration time-to-live (`JWT_TTL_SECONDS`).
+
+3. Edge Security & Ingress Guardrails:
+   - Sustained rate limits (`RATE_LIMIT_PER_MINUTE`), burst limits (`RATE_LIMIT_BURST`),
+     request body size caps (`MAX_BODY_BYTES`), and max concurrent requests.
+
+4. LLM Providers & Routing:
+   - Provider selection (`mock`, `self_hosted`, `third_party`), timeouts, and agent loop steps.
+   - PII routing policy (`ROUTE_SENSITIVE_TO_SELF_HOSTED`) directing sensitive traffic
+     to self-hosted models (e.g., Ollama/vLLM) over third-party APIs (e.g., OpenAI).
+
+5. Model Context Protocol (MCP) Integration:
+   - Target server endpoints for accounts, transactions, and service verticals
+     (supporting `"inprocess"` dispatch or standalone HTTP microservice URLs).
+   - Shared secret authentication for securing tool-calling communication channels.
+
+6. Storage & Audit Logs:
+   - SQLite database paths for session management (`sessions.db`) and core banking
+     records (`core_banking.db`), alongside append-only JSONL event trace logs (`traces.jsonl`).
+
+7. Cost Accounting & Session Budgeting:
+   - Token unit pricing dictionary (`pricing`) per 1M tokens across supported models.
+   - Per-session spending threshold (`SESSION_BUDGET_USD`) to halt runaway execution loops.
+"""
 from __future__ import annotations
 
 import os

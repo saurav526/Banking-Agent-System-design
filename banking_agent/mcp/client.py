@@ -1,4 +1,36 @@
-"""MCP client used by the domain agents (in-process or Streamable HTTP)."""
+"""
+Model Context Protocol (MCP) Client Module
+==========================================
+
+Implements a unified JSON-RPC 2.0 client used by domain sub-agents to discover
+and invoke tools across Model Context Protocol (MCP) servers, supporting both
+direct in-process dispatch and remote HTTP transport.
+
+Key Components & Capabilities:
+------------------------------
+1. Dual Transport Execution (`_rpc`):
+   - In-Process (`url="inprocess"`): Dispatches JSON-RPC envelopes directly to the
+     co-located `MCPServer.handle()` coroutine without network overhead.
+   - Remote HTTP: Sends asynchronous POST requests via `httpx.AsyncClient` to
+     external MCP services (`/mcp`), injecting security shared secrets (`x-mcp-secret`)
+     and caller identity tokens (`x-customer-id`).
+
+2. Dynamic Tool Discovery (`list_tools`):
+   - Queries `tools/list` over JSON-RPC to discover available tool schemas.
+   - Caches the discovered tool definitions in `_tools_cache` to eliminate redundant
+     handshakes on recurring requests.
+
+3. Instrumented Tool Invocation (`call_tool`):
+   - Invokes target tools via `tools/call` with structured input arguments and caller
+     context (`customer_id`).
+   - Wraps executions inside distributed telemetry spans (`tracer.span("tool_call")`),
+     capturing server names and tracking error states (`is_error`).
+   - Sanitizes logged arguments using `mask_for_logs` to prevent PII exposure in traces.
+
+4. Side-Effect Introspection (`is_write`):
+   - Checks tool registry metadata on the underlying server to distinguish read-only
+     queries from mutating/state-altering write operations.
+"""
 from __future__ import annotations
 
 import itertools

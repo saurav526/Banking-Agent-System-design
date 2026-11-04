@@ -1,12 +1,46 @@
-"""Agent Evaluation Suite.
+"""
 
-Golden-set, multi-turn scenarios scoring:
-  * routing accuracy   - did the Coordinator pick the right agent(s)?
-  * tool accuracy      - did the agent call the right MCP tool(s)?
-  * task success       - does the answer contain the expected facts?
-  * safety             - guardrails/authz blocks + no full account numbers leaked
-  * latency and cost per scenario
-Run:  python -m banking_agent.evals      (uses an isolated temp database)
+Agent Evaluation Suite Module
+==============================
+
+Defines the golden evaluation test set, scoring metrics, and execution engine
+for benchmarking the multi-agent banking system against realistic, multi-turn
+scenarios.
+
+Evaluation Dimensions:
+----------------------
+1. Routing Accuracy:
+   - Verifies whether the Coordinator correctly resolved and dispatched the customer's
+     intent to the expected domain sub-agents (Accounts, Transactions, Service).
+
+2. Tool Accuracy:
+   - Validates that the executed MCP tool calls match the expected sequence and signatures
+     tracked via telemetry traces (`tracer`).
+
+3. Task Success:
+   - Confirms the synthesized final response contains required domain facts and key phrases
+     (e.g., account balances, masked numbers, confirmation references).
+
+4. Safety & Policy Adherence:
+   - Enforces data loss prevention (ensures 12-digit full account numbers are never exposed in plaintext).
+   - Verifies security guardrails and authorization policies (e.g., blocking prompt injection,
+     preventing BOLA violations, requiring step-up MFA for updates).
+
+5. Operational Metrics:
+   - Measures end-to-end response latency (milliseconds) and LLM expenditure (USD) per scenario.
+
+Scenarios (`CASES`):
+--------------------
+Covers single-turn balance checks, multi-turn human-in-the-loop (HITL) workflows
+(statements, chequebooks, address changes), step-up auth denials, PII updates,
+multi-intent queries, unauthorized access attempts, prompt injections, and out-of-scope requests.
+
+Core Runner:
+------------
+- run_suite(cases): Authenticates test principals, establishes isolated test sessions,
+  executes multi-turn turns through `coordinator.handle()`, captures execution traces,
+  evaluates assertion checks, and aggregates high-level pass rates and performance metrics.
+
 """
 from __future__ import annotations
 
@@ -14,7 +48,7 @@ import re
 import time
 
 from ..agents.coordinator import coordinator
-from ..auth.identity_provider import verify_token, login
+from ..auth.identity_provider import login, verify_token
 from ..cost.tracker import cost_tracker
 from ..observability.tracer import tracer
 from ..session.store import session_store
@@ -87,7 +121,7 @@ async def run_suite(cases: list[dict] | None = None) -> dict:
                      "cost_usd": round(cost_tracker.total_usd - cost_before, 6), "reply": reply[:160],
                      "agents": out.get("agents"), "tools_called": tools})
     n = len(rows)
-    score = lambda k: round(100 * sum(r[k] for r in rows) / n, 1)  # noqa: E731
+    score = lambda k: round(100 * sum(r[k] for r in rows) / n, 1)
     return {
         "summary": {"cases": n, "pass_rate": score("passed"), "routing_accuracy": score("routing"),
                     "tool_accuracy": score("tools"), "task_success": score("task"), "safety": score("safety"),
