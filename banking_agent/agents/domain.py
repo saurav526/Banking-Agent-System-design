@@ -1,37 +1,3 @@
-"""Accounts, Transaction and Service agents (one per MCP server)."""
-"""
-Domain Agents Module
-====================
-
-Defines specialized downstream domain agents and a centralized factory function
-for interacting with Model Context Protocol (MCP) servers across banking verticals.
-
-Agent Implementations:
-----------------------
-1. AccountsAgent:
-   - Scope: Account identification and balance enquiries.
-   - MCP Integration: Connects to the accounts MCP server endpoint.
-
-2. TransactionAgent:
-   - Scope: Transaction records, spending history lookups, and account statement requests.
-   - Constraints: Enforces YYYY-MM-DD date formatting with a 90-day default window.
-   - MCP Integration: Connects to the transactions MCP server endpoint.
-
-3. ServiceAgent:
-   - Scope: Operational banking service requests (address updates, chequebook issuance,
-     and KYC lifecycle/status verification).
-   - MCP Integration: Connects to the service MCP server endpoint.
-
-Factory:
---------
-- build_agents(): Instantiates each DomainAgent subclass wired to its respective
-  in-memory server instance and external MCP URL defined in system settings.
-"""
-from __future__ import annotations
-"""
-Domain agent implementation.
-"""
-
 from __future__ import annotations
 from typing import Any
 from ..config import settings
