@@ -28,7 +28,12 @@ Factory:
   in-memory server instance and external MCP URL defined in system settings.
 """
 from __future__ import annotations
+"""
+Domain agent implementation.
+"""
 
+from __future__ import annotations
+from typing import Any
 from ..config import settings
 from ..mcp import accounts_server, service_server, transactions_server
 from ..mcp.client import MCPClient
