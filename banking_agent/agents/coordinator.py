@@ -42,11 +42,6 @@ End-to-End Turn Execution Lifecycle:
    - Updates dialogue history, active intents, trace identifiers (`tracer`), and inter-agent
      shared context within the `SessionStore`.
 """
-
-<<<<<<< HEAD
-# this module implements the Coordinator agent, which is the first point of contact for a user message. It handles guardrails, PII redaction, and routing to specialist agents (accounts, transactions, service) based on the user's intent. It also manages human-in-the-loop confirmation for state-changing operations and synthesizes responses from multiple agents when needed.
-=======
->>>>>>> 9314e0fb5cd604a696f69eeb63d129952396f5c0
 from __future__ import annotations
 
 import asyncio

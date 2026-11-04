@@ -34,7 +34,6 @@ from .observability.metrics import system_metrics
 from .observability.tracer import tracer
 from .session.store import session_store
 
-
 UI_DIR = Path(__file__).parent / "ui"
 
 app = FastAPI(
